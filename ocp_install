@@ -1,0 +1,796 @@
+Master ILO interface data:
+
+
+
+
+
+
+
+
+HP DL380	
+192.168.250.55
+admin/admin123	SLOT 1	NIC1	
+
+
+Ethernet1/23
+NIC2	
+
+
+Ethernet1/16
+NIC3	
+
+
+Ethernet1/7
+NIC4	
+
+
+
+SLOT 3	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	OAM	
+
+
+NIC4	
+
+
+
+SLOT 4	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	
+
+
+
+NIC4	
+
+
+
+SLOT 7	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	
+
+
+
+NIC4	
+
+
+
+
+192.168.250.56	SLOT 1	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	
+
+
+
+NIC4	
+
+
+
+SLOT 3	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	OAM	
+
+
+NIC4	
+
+
+
+SLOT 4	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	
+
+
+
+NIC4	
+
+
+
+SLOT 7	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	
+
+
+
+NIC4	
+
+
+
+
+192.168.250.56	SLOT 1	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	
+
+
+
+NIC4	
+
+
+
+SLOT 3	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	OAM	
+
+
+NIC4	
+
+
+
+SLOT 4	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	
+
+
+
+NIC4	
+
+
+
+SLOT 7	NIC1	
+
+
+
+NIC2	
+
+
+
+NIC3	
+
+
+
+NIC4	
+
+
+
+Mirror Registry:
+Steps: Mirror(bastion.srib-lab-ocp.lan) registry with OCP 4.18.23 images - SRIB Macro SysSW - Confluence
+
+DNS Settings:
+Steps: DNS Server [70.1.1.82] for 70.1.1.129 and 70.1.1.125 setups - SRIB Macro SysSW - Confluence
+
+ HAproxy:
+Get ssh-key, pull secret & additionalTrustBundle
+Copy the PULL SECRET from the following page and add to install-config.yaml => REDHAT download pag e
+get SSH-KEY from /home/srib/.ssh/id_rsa.pub  file from haproxy
+get additionalTrustBundle from /root/ocp-quay-root/quay-rootCA/rootCA.pem file in MIRROR Registry VM.
+Check MTU settings
+
+
+-------------------On Haproxy 70.1.1.125----------------------
+srib@ocp-haproxy-1:~$ ifconfig
+enp0s8: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 8500               ## Mtu should be 8500
+        inet 70.1.1.125  netmask 255.255.254.0  broadcast 70.1.1.255
+        inet6 fe80::e080:e4ff:fe0b:d8a9  prefixlen 64  scopeid 0x20<link>
+        inet6 2405:100:200:70::1:1837  prefixlen 64  scopeid 0x0<global>
+        ether e2:80:e4:0b:d8:a9  txqueuelen 1000  (Ethernet)
+        RX packets 1791656  bytes 143209097 (143.2 MB)
+        RX errors 0  dropped 0  overruns 0  frame 0
+        TX packets 1820676  bytes 1788891980 (1.7 GB)
+        TX errors 0  dropped 0 overruns 0  carrier 0  collisions 0
+----------------------------------------------------------------
+srib@ocp-haproxy-1:~$ ip route
+default via 10.0.2.2 dev enp0s3 proto dhcp src 10.0.2.15 metric 100
+default via 70.1.1.1 dev enp0s8 proto static metric 101
+10.0.2.0/24 dev enp0s3 proto kernel scope link src 10.0.2.15
+10.0.2.2 dev enp0s3 proto dhcp scope link src 10.0.2.15 metric 100
+40.1.0.0/23 via 70.1.1.1 dev enp0s8 proto static
+65.1.1.0/24 via 70.1.1.1 dev enp0s8 proto static
+70.1.0.0/23 dev enp0s8 proto kernel scope link src 70.1.1.125
+71.1.0.0/23 via 70.1.1.1 dev enp0s8 proto static
+-----------------------------------------------------------------
+srib@ocp-haproxy-1:~/ocp-agentMNO$ cat /etc/resolv.conf
+nameserver 70.1.1.82
+#nameserver 127.0.0.53
+options edns0 trust-ad
+search srib-lab-ocp.lan
+------------------------------------------------------------------
+# Check if the MTU is correctly set as 8500, by pinging to bastion with 8400 MTU.
+srib@ocp-haproxy-1:~/ocp-agentMNO$ ping -M do -s 8400 70.1.1.82
+PING 70.1.1.82 (70.1.1.82) 8400(8428) bytes of data.
+8408 bytes from 70.1.1.82: icmp_seq=1 ttl=64 time=0.467 ms
+8408 bytes from 70.1.1.82: icmp_seq=2 ttl=64 time=0.167 ms
+8408 bytes from 70.1.1.82: icmp_seq=3 ttl=64 time=0.385 ms
+-------------------On Bastion 70.1.1.82----------------------
+#check the virtual interface of 70.1.1.125 haproxy vm in virtualbox.
+[root@bastion zones]# ifconfig ens2f2v1
+ens2f2v1: flags=4163<UP,BROADCAST,RUNNING,MULTICAST> mtu 8500
+ether e2:80:e4:0b:d8:a9 txqueuelen 1000 (Ethernet)
+RX packets 108 bytes 7534 (7.3 KiB)
+RX errors 0 dropped 0 overruns 0 frame 0
+TX packets 127 bytes 9370 (9.1 KiB)
+TX errors 0 dropped 0 overruns 0 carrier 0 collisions 0
+Agent based installation:
+
+
+
+
+srib@ocp-haproxy-1:~$ mkdir ocp-agentMNO
+srib@ocp-haproxy-1:~$
+srib@ocp-haproxy-1:~/ocp-agentMNO$cd ocp-agentMNO
+srib@ocp-haproxy-1:~/ocp-agentMNO$
+srib@ocp-haproxy-1:~/ocp-agentMNO$ mkdir ocp-install
+srib@ocp-haproxy-1:~/ocp-agentMNO$
+install-config.yaml
+
+
+apiVersion: v1
+baseDomain: srib-lab-ocp.lan
+cpuPartitioningMode: AllNodes
+imageContentSources:
+- mirrors:
+  - bastion.srib-lab-ocp.lan:8443/ocp4/openshift4
+  source: quay.io/openshift-release-dev/ocp-release
+- mirrors:
+  - bastion.srib-lab-ocp.lan:8443/ocp4/openshift4
+  source: quay.io/openshift-release-dev/ocp-v4.0-art-dev
+metadata:
+  name: lab4
+compute:
+- hyperthreading: Enabled
+  name: worker
+  replicas: 0
+controlPlane:
+  hyperthreading: Enabled
+  name: master
+  replicas: 3
+networking:
+  networkType: OVNKubernetes
+  clusterNetwork:
+  - cidr: 10.128.0.0/14
+    hostPrefix: 23
+  - cidr: fd01::/48
+    hostPrefix: 64
+  serviceNetwork:
+  - 172.30.0.0/16
+  - fd02::/112
+  machineNetwork:
+  - cidr: 71.1.0.0/23
+  - cidr: 2405:100:200:71::/64
+platform:
+  baremetal:
+    apiVIPs:
+    - 71.1.1.245
+    - 2405:100:200:71::1:567
+    ingressVIPs:
+    - 71.1.1.246
+    - 2405:100:200:71::1:568
+fips: false
+pullSecret: '{"auths": {"bastion.srib-lab-ocp.lan:8443": {"auth": "c3lzYWRtaW46c2Ftc3VuZzEyMw=="},"cloud.openshift.com": {"auth": "b3BlbnNoaWZ0LXJlbGVhc2UtZGV2K29jbV9hY2Nlc3NfZjBmODc1ODBkNWNhNDBkMDgyMzk3ODUwMTM2NjNkOGY6TVhUMDIzVkVMRjVHQkxGNzJSOU5GWEo2TkROVUdHVU80SkZNVjIwSkhHTlc5MVg3RFNOV0ZYOUpQTlBUNkNPOA=="},"quay.io": {"auth": "b3BlbnNoaWZ0LXJlbGVhc2UtZGV2K29jbV9hY2Nlc3NfZjBmODc1ODBkNWNhNDBkMDgyMzk3ODUwMTM2NjNkOGY6TVhUMDIzVkVMRjVHQkxGNzJSOU5GWEo2TkROVUdHVU80SkZNVjIwSkhHTlc5MVg3RFNOV0ZYOUpQTlBUNkNPOA=="},"registry.connect.redhat.com": {"auth": "fHVoYy1wb29sLWY4YzY3ZTk4LWJkMDEtNDM3ZC1iYTZkLWNmY2FmMmEzNDVmZDpleUpoYkdjaU9pSlNVelV4TWlKOS5leUp6ZFdJaU9pSTJaVGxoT0RGaFpXTXpZMlEwWkdNME9EbGpNbU01TnpZMVpEYzROemMxTlNKOS5oa0ZwRGFzTi0walJIVzZ4QjRZUDdISFRHS0RSa2VnVDNFRlJpdEdGMW9ITC11b2pTMzVZVVVIN2lnbTNDQ1lwUElOYmplVlB5RW81SEtNVWVUbUlLOHFzd0U5T3RBRl9XTWxfVDZreUJja2NxSkhYRy02d2ZIU2ZwOTJvS291RnpIOWNiQ2k3T1J0Rk0wR0NjXzViRHBUS2JBZ2hSS3d1cnRBcVN6NGYxbGM0ZDRKMHNEczdNajRnUWxTZVBIbUsyeUxjS3VvUDFaTkJPb0stNUdNcDVOTXV2TjBPSGhVQ1BlTEJidUxTaFk2dy15cE0zWEo4RUhLcmZVU1ozczMxYkpzeVRSLXpMWlF2U21XakZXUkN2VkhGd0NBaEx1aG10UTRWZWVMZmN6WGFzX1ZsUTlIV1FIY29ual9xY0lrdmFyLVQ0dElscFlJT3BTSWJnVFQ2Nm5NamdKdEF1bG0zeklLQ05TczB3cTNQeWZJc2p6OU1yeGdacDJNQW9EeGxBdXc4Z2ttZGQxSnNkS3FCdngzNk9CM3R4Si05blRGUkhXTFEtV0NseW45Ml84eTNYc1pGOUplbWZSRE1TYXpTWk5Db19LNEYtcnpSZ1F1bUtuaW01SW9HN2RoNnBzZkt5cmpDbVo0OUhMWmJ0Uy1UUkNXbkE3ZkZfR3J6VVRITEl6WkdBTG9VTmUydFBCN3lXRXVoOTgxcTExN21qajI1akwzcnJRU0RRam1kY1RBX01VNkNwX1pla2U0eEM0aDNTZXk5RTdobk5HVG1Od0pDaWxGZzkzQnRucV8tNnhocGFpNmtkbEdRXzFfWkJSVXBGRUZ5TFhySlZTRXBWeWRpUTlxWloxYjI3ektPZ0hSYmFWYm0tVzRjUGdpUEs4WXlGbGVLWExZRlo3NA=="},"registry.redhat.io": {"auth": "fHVoYy1wb29sLWY4YzY3ZTk4LWJkMDEtNDM3ZC1iYTZkLWNmY2FmMmEzNDVmZDpleUpoYkdjaU9pSlNVelV4TWlKOS5leUp6ZFdJaU9pSTJaVGxoT0RGaFpXTXpZMlEwWkdNME9EbGpNbU01TnpZMVpEYzROemMxTlNKOS5oa0ZwRGFzTi0walJIVzZ4QjRZUDdISFRHS0RSa2VnVDNFRlJpdEdGMW9ITC11b2pTMzVZVVVIN2lnbTNDQ1lwUElOYmplVlB5RW81SEtNVWVUbUlLOHFzd0U5T3RBRl9XTWxfVDZreUJja2NxSkhYRy02d2ZIU2ZwOTJvS291RnpIOWNiQ2k3T1J0Rk0wR0NjXzViRHBUS2JBZ2hSS3d1cnRBcVN6NGYxbGM0ZDRKMHNEczdNajRnUWxTZVBIbUsyeUxjS3VvUDFaTkJPb0stNUdNcDVOTXV2TjBPSGhVQ1BlTEJidUxTaFk2dy15cE0zWEo4RUhLcmZVU1ozczMxYkpzeVRSLXpMWlF2U21XakZXUkN2VkhGd0NBaEx1aG10UTRWZWVMZmN6WGFzX1ZsUTlIV1FIY29ual9xY0lrdmFyLVQ0dElscFlJT3BTSWJnVFQ2Nm5NamdKdEF1bG0zeklLQ05TczB3cTNQeWZJc2p6OU1yeGdacDJNQW9EeGxBdXc4Z2ttZGQxSnNkS3FCdngzNk9CM3R4Si05blRGUkhXTFEtV0NseW45Ml84eTNYc1pGOUplbWZSRE1TYXpTWk5Db19LNEYtcnpSZ1F1bUtuaW01SW9HN2RoNnBzZkt5cmpDbVo0OUhMWmJ0Uy1UUkNXbkE3ZkZfR3J6VVRITEl6WkdBTG9VTmUydFBCN3lXRXVoOTgxcTExN21qajI1akwzcnJRU0RRam1kY1RBX01VNkNwX1pla2U0eEM0aDNTZXk5RTdobk5HVG1Od0pDaWxGZzkzQnRucV8tNnhocGFpNmtkbEdRXzFfWkJSVXBGRUZ5TFhySlZTRXBWeWRpUTlxWloxYjI3ektPZ0hSYmFWYm0tVzRjUGdpUEs4WXlGbGVLWExZRlo3NA=="}}}'
+sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOPdud+5j4yEBxdQJ4/lh9FBDLx3OF13D8P1za9o0mTS srib@ocp-haproxy-4.lab4.srib-lab-ocp.lan'
+additionalTrustBundle: |
+  -----BEGIN CERTIFICATE-----
+  -----END CERTIFICATE-----
+agent-config.yaml
+
+
+apiVersion: v1alpha1
+kind: AgentConfig
+metadata:
+  name: lab4
+additionalNTPSources:
+  - 70.1.1.129
+rendezvousIP: 71.1.1.5
+hosts:
+  - hostname: master1.lab4.srib-lab-ocp.lan
+    role: master
+    interfaces:
+    - name: ens1f0
+      macAddress: "50:7c:6f:4b:9f:58"
+    - name: ens4f0
+      macAddress: "6c:fe:54:63:08:f4"
+    rootDeviceHints:
+      deviceName: /dev/sda
+    networkConfig:
+      interfaces:
+      - name: bond0
+        type: bond
+        state: up
+        mtu: 8500
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 71.1.1.5
+            prefix-length: 23
+        ipv6:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 2405:100:200:71::1:552
+            prefix-length: 64
+        link-aggregation:
+          mode: active-backup
+          options:
+            miimon: "100"
+          port:
+           - ens1f0
+           - ens4f0
+      dns-resolver:
+        config:
+          server:
+          - 70.1.1.82
+          - 2405:100:200:70::1:1769
+          search:
+          - srib-lab-ocp.lan
+      routes:
+        config:
+        - destination: 0.0.0.0/0
+          next-hop-address: 71.1.0.1
+          next-hop-interface: bond0
+        - destination: ::/0
+          next-hop-address: 2405:100:200:71::1
+          next-hop-interface: bond0
+        - destination: 70.1.0.0/23
+          next-hop-address: 71.1.0.1
+          next-hop-interface: bond0
+        - destination: 2405:100:200:70::/64
+          next-hop-address: 2405:100:200:71::1
+          next-hop-interface: bond0
+  - hostname: master2.lab4.srib-lab-ocp.lan
+    role: master
+    interfaces:
+    - name: ens1f0
+      macAddress: "50:7c:6f:4b:98:d0"
+    - name: ens4f0
+      macAddress: "6c:fe:54:63:00:0c"
+    rootDeviceHints:
+      deviceName: /dev/sda
+    networkConfig:
+      interfaces:
+      - name: bond0
+        type: bond
+        state: up
+        mtu: 8500
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 71.1.1.105
+            prefix-length: 23
+        ipv6:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 2405:100:200:71::1:553
+            prefix-length: 64
+        link-aggregation:
+          mode: active-backup
+          options:
+            miimon: "100"
+          port:
+           - ens1f0
+           - ens4f0
+      dns-resolver:
+        config:
+          server:
+          - 70.1.1.82
+          - 2405:100:200:70::1:1769
+          search:
+          - srib-lab-ocp.lan
+      routes:
+        config:
+        - destination: 0.0.0.0/0
+          next-hop-address: 71.1.0.1
+          next-hop-interface: bond0
+        - destination: ::/0
+          next-hop-address: 2405:100:200:71::1
+          next-hop-interface: bond0
+        - destination: 70.1.0.0/23
+          next-hop-address: 71.1.0.1
+          next-hop-interface: bond0
+        - destination: 2405:100:200:70::/64
+          next-hop-address: 2405:100:200:71::1
+          next-hop-interface: bond0
+  - hostname: master3.lab4.srib-lab-ocp.lan
+    role: master
+    interfaces:
+    - name: ens1f0
+      macAddress: "50:7c:6f:4b:9e:d0"
+    - name: ens4f0
+      macAddress: "6c:fe:54:62:dd:5c"
+    rootDeviceHints:
+      deviceName: /dev/sda
+    networkConfig:
+      interfaces:
+      - name: bond0
+        type: bond
+        state: up
+        mtu: 8500
+        ipv4:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 71.1.1.109
+            prefix-length: 23
+        ipv6:
+          enabled: true
+          dhcp: false
+          address:
+          - ip: 2405:100:200:71::1:554
+            prefix-length: 64
+        link-aggregation:
+          mode: active-backup
+          options:
+            miimon: "100"
+          port:
+           - ens1f0
+           - ens4f0
+      dns-resolver:
+        config:
+          server:
+          - 70.1.1.82
+          - 2405:100:200:70::1:1769
+          search:
+          - srib-lab-ocp.lan
+      routes:
+        config:
+        - destination: 0.0.0.0/0
+          next-hop-address: 71.1.0.1
+          next-hop-interface: bond0
+        - destination: ::/0
+          next-hop-address: 2405:100:200:71::1
+          next-hop-interface: bond0
+        - destination: 70.1.0.0/23
+          next-hop-address: 71.1.0.1
+          next-hop-interface: bond0
+        - destination: 2405:100:200:70::/64
+          next-hop-address: 2405:100:200:71::1
+          next-hop-interface: bond0
+
+
+[root@ocp-main ocp-installMNO]# mv install-config.yaml agent-config.yaml ocp-install/.
+[root@ocp-main ocp-installMNO]#
+Create cluster-manifests... Expand source
+
+
+srib@ocp-haproxy-4:~/ocp-install/openshift$ mkdir openshift
+srib@ocp-haproxy-4:~/ocp-install/openshift$ cd openshift
+srib@ocp-haproxy-4:~/ocp-install/openshift$ vi machine-config-99-sctp-module.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  name: 99-load-sctp-module
+  labels:
+    machineconfiguration.openshift.io/role: master
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    storage:
+      files:
+        - path: /etc/modprobe.d/sctp-blacklist.conf
+          mode: 0644
+          overwrite: true
+          contents:
+            source: data:,
+        - path: /etc/modules-load.d/sctp-load.conf
+          mode: 0644
+          overwrite: true
+          contents:
+            source: data:,sctp
+[root@ocp-main openshift]#
+[root@ocp-main openshift]#
+[root@ocp-main openshift]#
+[root@ocp-main openshift]# COREPASSWORDHASH=$(printf "srib@123" | openssl passwd -6 --stdin)
+[root@ocp-main openshift]# echo $COREPASSWORDHASH
+<....>
+[root@ocp-main openshift]#
+#this is optional, but can be used to set for core user password
+[root@ocp-main openshift]# cat machine-config-99-set-core-master-password.yaml
+apiVersion: machineconfiguration.openshift.io/v1
+kind: MachineConfig
+metadata:
+  labels:
+    machineconfiguration.openshift.io/role: master
+  name: 99-set-core-master-password
+spec:
+  config:
+    ignition:
+      version: 3.2.0
+    passwd:
+      users:
+      - name: core
+        passwordHash: <....>
+[root@ocp-main openshift]#
+[root@ocp-main openshift]#
+[root@ocp-main openshift]#
+Create image... Expand source
+
+
+srib@ocp-haproxy-1:~/ocp-agentMNO$ ls -lart
+total 670396
+-rwxr-xr-x  1 srib srib 686448792 Jan 14 08:17 openshift-install
+-rw-rw-r--  1 srib srib      6027 Jan 14 08:28 install-config.yaml
+-rw-rw-r--  1 srib srib      3748 Jan 14 08:38 agent-config.yaml
+drwxrwxr-x  2 srib srib      4096 Jan 14 08:41 openshift
+drwxrwxr-x  4 srib srib      4096 Jan 14 09:21 .
+drwxr-xr-x 33 srib srib      4096 Jan 14 09:22 ..
+drwxrwxr-x  3 srib srib      4096 Jan 14 09:28 ocp-install
+srib@ocp-haproxy-1:~/ocp-agentMNO$ cd ocp-install/
+srib@ocp-haproxy-1:~/ocp-agentMNO/ocp-install$ ls
+agent.x86_64.iso  auth  rendezvousIP
+srib@ocp-haproxy-1:~/ocp-agentMNO/ocp-install$ pwd
+/home/srib/ocp-agentMNO/ocp-install
+srib@ocp-haproxy-1:~/ocp-agentMNO/ocp-install$ ls /home/srib/ocp-agentMNO/ocp-install/agent.x86_64.iso
+/home/srib/ocp-agentMNO/ocp-install/agent.x86_64.iso
+A. Load agent.x86_64.iso into new VM with best available ram and cpu (example : 64GB RAM,  16 core vCPU, 120 GB disk, 1 network adaptor ISOLATED network [MAC b4:96:91:21:d9:75]) 
+
+B. set the MTU in isolated NW NIC (<mtu size="8500"/>)
+
+C. Please make sure to specify the boot order as HDD → CD before installation.
+
+
+
+Wait for bootstrap to complete Expand source
+
+
+
+
+####### Add kubeconfig path to .bashrc of /home/srib location ####
+srib@ocp-haproxy-1:~$ vi ~/.bashrc
+# OCP 4.18.23 MNO Cluster Donot Change
+export KUBECONFIG=$HOME/ocp-agentMNO/ocp-install/auth/kubeconfig
+----------------------------------------------------------------------
+srib@ocp-haproxy-1:~$ source ~/.bashrc
+srib@ocp-haproxy-1:~$
+---------------------------------------------------------------------
+srib@ocp-haproxy-1:~$ oc get nodes
+NAME                             STATUS   ROLES                         AGE   VERSION
+ocp-cp-1.lab1.srib-lab-ocp.lan   Ready    control-plane,master,worker   49m   v1.31.11
+ocp-cp-2.lab1.srib-lab-ocp.lan   Ready    control-plane,master,worker   82m   v1.31.11
+ocp-cp-3.lab1.srib-lab-ocp.lan   Ready    control-plane,master,worker   80m   v1.31.11
+------------------------------------------------------------------------------------------------------------
+srib@ocp-haproxy-1:~$ oc get co
+NAME                                       VERSION   AVAILABLE   PROGRESSING   DEGRADED   SINCE   MESSAGE
+authentication                             4.18.23   True        False         False      49m
+baremetal                                  4.18.23   True        False         False      81m
+cloud-controller-manager                   4.18.23   True        False         False      83m
+cloud-credential                           4.18.23   True        False         False      102m
+cluster-autoscaler                         4.18.23   True        False         False      81m
+config-operator                            4.18.23   True        False         False      82m
+console                                    4.18.23   True        False         False      64m
+control-plane-machine-set                  4.18.23   True        False         False      81m
+csi-snapshot-controller                    4.18.23   True        False         False      82m
+dns                                        4.18.23   True        False         False      81m
+etcd                                       4.18.23   True        False         False      80m
+image-registry                             4.18.23   True        False         False      66m
+ingress                                    4.18.23   True        False         False      69m
+insights                                   4.18.23   True        False         False      81m
+kube-apiserver                             4.18.23   True        False         False      75m
+kube-controller-manager                    4.18.23   True        False         False      78m
+kube-scheduler                             4.18.23   True        False         False      78m
+kube-storage-version-migrator              4.18.23   True        False         False      82m
+machine-api                                4.18.23   True        False         False      77m
+machine-approver                           4.18.23   True        False         False      81m
+machine-config                             4.18.23   True        False         False      81m
+marketplace                                4.18.23   True        False         False      81m
+monitoring                                 4.18.23   True        False         False      65m
+network                                    4.18.23   True        False         False      82m
+node-tuning                                4.18.23   True        False         False      52m
+olm                                        4.18.23   True        False         False      65m
+openshift-apiserver                        4.18.23   True        False         False      70m
+openshift-controller-manager               4.18.23   True        False         False      68m
+openshift-samples                          4.18.23   True        False         False      63m
+operator-lifecycle-manager                 4.18.23   True        False         False      81m
+operator-lifecycle-manager-catalog         4.18.23   True        False         False      81m
+operator-lifecycle-manager-packageserver   4.18.23   True        False         False      70m
+service-ca                                 4.18.23   True        False         False      82m
+storage                                    4.18.23   True        False         False      82m
+-------------------------------------------------------------------------------------------------------------------
+srib@ocp-haproxy-1:~$ oc get mcp
+NAME     CONFIG                                             UPDATED   UPDATING   DEGRADED   MACHINECOUNT   READYMACHINECOUNT   UPDATEDMACHINECOUNT   DEGRADEDMACHINECOUNT   AGE
+master   rendered-master-c754a0c38f81cb1256f1eea0acd94b28   True      False      False      3              3                   3                     0                      82m
+worker   rendered-worker-1e93ba471013ba798a50a45323a609ad   True      False      False      0              0                   0                     0                      82m
+srib@ocp-haproxy-1:~$
+----------------------------------------------------------------------------------
+srib@ocp-haproxy-1:~$ oc get mc
+NAME                                               GENERATEDBYCONTROLLER                      IGNITIONVERSION   AGE
+00-master                                          6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+00-worker                                          6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+01-master-container-runtime                        6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+01-master-cpu-partitioning                                                                    3.2.0             104m
+01-master-kubelet                                  6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+01-worker-container-runtime                        6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+01-worker-cpu-partitioning                                                                    3.2.0             104m
+01-worker-kubelet                                  6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+50-masters-chrony-configuration                                                               3.1.0             104m
+50-workers-chrony-configuration                                                               3.1.0             104m
+97-master-generated-kubelet                        6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+97-worker-generated-kubelet                        6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+98-master-generated-kubelet                        6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+98-worker-generated-kubelet                        6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+99-assisted-installer-master-ssh                                                              3.1.0             104m
+99-master-generated-registries                     6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+99-master-ssh                                                                                 3.2.0             104m
+99-worker-generated-registries                     6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+99-worker-ssh                                                                                 3.2.0             104m
+rendered-master-c754a0c38f81cb1256f1eea0acd94b28   6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+rendered-worker-1e93ba471013ba798a50a45323a609ad   6cabdc1467e3bcc9961544e148530a9c88789856   3.4.0             82m
+----------------------------------------------------------------------------------------------
+[srib@ocp-haproxy-1:~$  oc describe network.config cluster
+Name:         cluster
+Namespace:
+Labels:       <none>
+Annotations:  <none>
+API Version:  config.openshift.io/v1
+Kind:         Network
+Metadata:
+  Creation Timestamp:  2026-01-14T10:26:35Z
+  Generation:          3
+  Resource Version:    28524
+  UID:                 04f1a2e0-3de8-4bad-9733-1505ef7bc768
+Spec:
+  Cluster Network:
+    Cidr:         10.128.0.0/14
+    Host Prefix:  23
+    Cidr:         fd01::/48
+    Host Prefix:  64
+  External IP:
+    Policy:
+  Network Diagnostics:
+    Mode:
+    Source Placement:
+    Target Placement:
+  Network Type:  OVNKubernetes
+  Service Network:
+    172.30.0.0/16
+    fd02::/112
+Status:
+  Cluster Network:
+    Cidr:               10.128.0.0/14
+    Host Prefix:        23
+    Cidr:               fd01::/48
+    Host Prefix:        64
+  Cluster Network MTU:  8400
+  Conditions:
+    Last Transition Time:  2026-01-14T11:21:13Z
+    Message:
+    Observed Generation:   0
+    Reason:                AsExpected
+    Status:                True
+    Type:                  NetworkDiagnosticsAvailable
+  Network Type:            OVNKubernetes
+  Service Network:
+    172.30.0.0/16
+    fd02::/112
+Events:  <none>
+---------------------------------------------------------------------------------------------------------------------------
+srib@ocp-haproxy-1:~$ echo "show stat" | sudo nc -U /var/lib/haproxy/stats | cut -d "," -f 1,2,8,9,10,18,74 | column -s, -t
+[sudo] password for srib:
+# pxname                            svname    stot  bin  bout  status  addr
+stats                               FRONTEND  0     0    0     OPEN
+stats                               BACKEND   0     0    0     UP
+k8s_api_frontend                    FRONTEND  0     0    0     OPEN
+k8s_api_backend                     ocp-cp-1  0     0    0     UP      71.1.1.230:6443
+k8s_api_backend                     ocp-cp-2  0     0    0     UP      71.1.1.227:6443
+k8s_api_backend                     ocp-cp-3  0     0    0     UP      71.1.1.229:6443
+k8s_api_backend                     BACKEND   0     0    0     UP
+ocp_machine_config_server_frontend  FRONTEND  0     0    0     OPEN
+ocp_machine_config_server_backend   ocp-cp-1  0     0    0     UP      71.1.1.230:22623
+ocp_machine_config_server_backend   ocp-cp-2  0     0    0     UP      71.1.1.227:22623
+ocp_machine_config_server_backend   ocp-cp-3  0     0    0     UP      71.1.1.229:22623
+ocp_machine_config_server_backend   BACKEND   0     0    0     UP
+ocp_http_ingress_frontend           FRONTEND  0     0    0     OPEN
+ocp_http_ingress_backend            ocp-cp-1  0     0    0     DOWN    71.1.1.230:80
+ocp_http_ingress_backend            ocp-cp-2  0     0    0     UP      71.1.1.227:80
+ocp_http_ingress_backend            ocp-cp-3  0     0    0     UP      71.1.1.229:80
+ocp_http_ingress_backend            BACKEND   0     0    0     UP
+ocp_https_ingress_frontend          FRONTEND  0     0    0     OPEN
+ocp_https_ingress_backend           ocp-cp-1  0     0    0     DOWN    71.1.1.230:443
+ocp_https_ingress_backend           ocp-cp-2  0     0    0     UP      71.1.1.227:443
+ocp_https_ingress_backend           ocp-cp-3  0     0    0     UP      71.1.1.229:443
+ocp_https_ingress_backend           BACKEND   0     0    0     UP
+srib@ocp-haproxy-1:~$
+---------------------------------------------------------------------------------------------------------------------------
+srib@ocp-haproxy-1:~$ ssh -l core 71.1.1.230
+The authenticity of host '71.1.1.230 (71.1.1.230)' can't be established.
+ECDSA key fingerprint is SHA256:b7hevG6wJ7FLKdyWAgdZHHPzShYWe9EAa6LuxgMmREw.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '71.1.1.230' (ECDSA) to the list of known hosts.
+Red Hat Enterprise Linux CoreOS 418.94.202508261658-0
+  Part of OpenShift 4.18, RHCOS is a Kubernetes-native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.18/architecture/architecture-rhcos.html
+---
+[systemd]
+Failed Units: 3
+  chrony-wait.service
+  NetworkManager-wait-online.service
+  systemd-udev-settle.service
+[core@ocp-cp-1 ~]$
+----------------------------------------------------
+srib@ocp-haproxy-1:~$ ssh -l core 71.1.1.229
+The authenticity of host '71.1.1.229 (71.1.1.229)' can't be established.
+ECDSA key fingerprint is SHA256:HEnDcdCbMVyr286C2Oh59GYtqNLJDMSWc30QPpPYQ0w.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '71.1.1.229' (ECDSA) to the list of known hosts.
+Red Hat Enterprise Linux CoreOS 418.94.202508261658-0
+  Part of OpenShift 4.18, RHCOS is a Kubernetes-native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.18/architecture/architecture-rhcos.html
+---
+[systemd]
+Failed Units: 2
+  chrony-wait.service
+  NetworkManager-wait-online.service
+[core@ocp-cp-3 ~]$
+----------------------------------------------------
+srib@ocp-haproxy-1:~$ ssh -l core 71.1.1.227
+The authenticity of host '71.1.1.227 (71.1.1.227)' can't be established.
+ECDSA key fingerprint is SHA256:aFV98DA72XhjmSln//aDpU/SqugBiPn15C/i0FBTqhE.
+Are you sure you want to continue connecting (yes/no/[fingerprint])? yes
+Warning: Permanently added '71.1.1.227' (ECDSA) to the list of known hosts.
+Red Hat Enterprise Linux CoreOS 418.94.202508261658-0
+  Part of OpenShift 4.18, RHCOS is a Kubernetes-native operating system
+  managed by the Machine Config Operator (`clusteroperator/machine-config`).
+WARNING: Direct SSH access to machines is not recommended; instead,
+make configuration changes via `machineconfig` objects:
+  https://docs.openshift.com/container-platform/4.18/architecture/architecture-rhcos.html
+---
+[systemd]
+Failed Units: 2
+  chrony-wait.service
+  NetworkManager-wait-online.service
+[core@ocp-cp-2 ~]$
